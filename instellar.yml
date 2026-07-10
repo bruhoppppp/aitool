@@ -1,0 +1,51 @@
+dependencies:
+  build:
+    - nodejs-current
+    - npm
+  runtime:
+    - caddy
+    - bash
+    - curl
+    - s6
+    - jq
+    - ca-certificates
+    - aitool-openrc
+
+stack: alpine/3.16
+
+build:
+  command: |
+    npm install
+    npm run build
+  destinations:
+    - dist
+    - Caddyfile
+
+run:
+  name: aitool
+  services:
+    - binary: caddy
+      name: web
+      path: /usr/sbin
+      start:
+        call: run --config /var/lib/aitool/Caddyfile
+
+hook:
+  post-deinstall: |
+    rc-service aitool stop
+    rc-update del aitool
+  post-install: |
+    rc-update add aitool
+  post-upgrade: |
+    rc-service aitool start
+  pre-upgrade: |
+    rc-service aitool stop
+
+kits:
+  - description: static site server
+    main: true
+    name: web
+    ports:
+      - main: true
+        name: web
+        target: 3000
